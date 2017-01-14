@@ -9,7 +9,9 @@ describe('token-bucket params', () => {
             setAndUnlock: () => {}
         },
         identifier: 'id',
-        capacity: 10
+        capacity: 10,
+        perInterval: 1,
+        interval: 1000
     };
 
     const patch = function(update){
@@ -56,32 +58,36 @@ describe('token-bucket params', () => {
                 identifier: 'valid' 
             }))).to.throw('"setAndUnlock" is required');
         });
-    })
+    });
 
-    describe('capacity', () => {
-        it('should fail if capacity is not a number', () => {
-            expect(() => new TokenBucket(patch({ capacity: 'hello' })))
-                .to.throw('"capacity" must be a number');
-        });
+    ['capacity', 'interval', 'perInterval'].forEach(param => {
+        describe(param, () => {
+            it('should fail if ${param} is not a number', () => {
+                const update = {};
+                update[param] = 'hello';
+                expect(() => new TokenBucket(patch(update)))
+                    .to.throw(`"${param}" must be a number`);
+            });
 
-        it('should fail if capacity is not greater than 0', () => {
-            expect(() => new TokenBucket(patch({ capacity: -1 })))
-                .to.throw('"capacity" must be greater than 0');
-        });
+            it('should fail if ${param} is not greater than 0', () => {
+                const update = {};
+                update[param] = -1;
+                expect(() => new TokenBucket(patch(update)))
+                    .to.throw(`"${param}" must be greater than 0`);
+            });
 
-        it('should fail if capacity is not an integer', () => {
-            expect(() => new TokenBucket(patch({ capacity: 1.2 })))
-                .to.throw('"capacity" must be an integer');
-        });
+            it('should fail if ${param} is not an integer', () => {
+                const update = {};
+                update[param] = 1.2;
+                expect(() => new TokenBucket(patch(update)))
+                    .to.throw(`"${param}" must be an integer`);
+            });
 
-        it('should fail if capacity is not present', () => {
-            expect(() => new TokenBucket({ 
-                storage: {
-                    setAndUnlock: () => {},
-                    getAndLock: () => {}
-                },
-                identifier: 'id'
-            })).to.throw('"capacity" is required');
+            it('should fail if ${param} is not present', () => {
+                const paramsClone = Object.assign({}, params);
+                delete paramsClone[param];
+                expect(() => new TokenBucket(paramsClone)).to.throw(`"${param}" is required`);
+            });
         });
     });
 });

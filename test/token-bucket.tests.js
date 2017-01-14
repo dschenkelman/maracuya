@@ -5,6 +5,8 @@ const TokenBucket = require('../lib/token-bucket');
 describe('token-bucket implementation', () => {
     const DEFAULT_IDENTIFIER = 'bucket-id';
     const DEFAULT_CAPACITY = 10;
+    const DEFAULT_INTERVAL = 1000;
+    const DEFAULT_PER_INTERVAL = 1;
     const createTokenBucket = function createTokenBucket(patch){
         patch = patch || {};
         const storage = {
@@ -15,7 +17,9 @@ describe('token-bucket implementation', () => {
         return new TokenBucket(Object.assign({}, { 
             identifier: DEFAULT_IDENTIFIER, 
             capacity: DEFAULT_CAPACITY, 
-            storage 
+            interval: DEFAULT_INTERVAL,
+            perInterval: DEFAULT_PER_INTERVAL,
+            storage
         }, patch));
     };
 

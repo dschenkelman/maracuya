@@ -1,0 +1,17 @@
+{
+  "name": "terminus",
+  "version": "1.0.0",
+  "description": "An app layer distributed rate limiter",
+  "main": "index.js",
+  "author": "dschenkelman",
+  "license": "MIT",
+  "dependencies": {},
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "sinon": "^1.17.7"
+  }
+}

@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+    terminus:
+        build:
+            context: .
+    test:
+        command: npm test
+        volumes: 
+            - .:/app
+        build:
+            context: .
+        tty: true

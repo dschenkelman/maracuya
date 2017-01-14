@@ -90,4 +90,11 @@ describe('token-bucket params', () => {
             });
         });
     });
+
+    describe('timestampProvider', () => {
+        it('should fail if timestampProvider is not function', () => { 
+            expect(() => new TokenBucket(patch({ timestampProvider: 1 })))
+                .to.throw('"timestampProvider" must be a Function');
+        });
+    });
 });

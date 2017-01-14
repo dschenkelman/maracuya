@@ -5,7 +5,9 @@
   "main": "index.js",
   "author": "dschenkelman",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "joi": "^10.1.0"
+  },
   "scripts": {
     "test": "mocha"
   },

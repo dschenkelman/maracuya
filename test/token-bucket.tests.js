@@ -2,55 +2,26 @@ const expect = require('chai').expect;
 const sinon = require('sinon');
 const TokenBucket = require('../lib/token-bucket');
 
-describe('token-bucket', () => {
-    describe('options', () => {
-        it('should fail if identifier is not present', () => {
-            expect(() => new TokenBucket({})).to.throw('"identifier" is required');
-        });
+describe('token-bucket implementation', () => {
+    const DEFAULT_IDENTIFIER = 'bucket-id';
+    const DEFAULT_CAPACITY = 10;
+    const createTokenBucket = function createTokenBucket(patch){
+        patch = patch || {};
+        const storage = {
+            getAndLock: sinon.stub().yields(null, 0),
+            setAndUnlock: sinon.stub().yields(null)
+        };
 
-        it('should fail if identifier is not string', () => {
-            expect(() => new TokenBucket({ identifier: []})).to.throw('"identifier" must be a string');
-        });
+        return new TokenBucket(Object.assign({}, { 
+            identifier: DEFAULT_IDENTIFIER, 
+            capacity: DEFAULT_CAPACITY, 
+            storage 
+        }, patch));
+    };
 
-        it('should fail if identifier is empty', () => {
-            expect(() => new TokenBucket({ identifier: ''})).to.throw('"identifier" is not allowed to be empty');
-        });
-
-        it('shoud fail if storage is not present', () =>{
-            expect(() => new TokenBucket({ identifier: 'valid' })).to.throw('"storage" is required');
-        });
-
-        it('shoud fail if storage is not object', () =>{
-            expect(() => new TokenBucket({ identifier: 'valid', storage: 1 })).to.throw('"storage" must be an object');
-        });
-
-        it('shoud fail if storage does not have getAndLock', () =>{
-            expect(() => new TokenBucket({ 
-                storage: {
-                    setAndUnlock: () => {}
-                },
-                identifier: 'valid' 
-            })).to.throw('"getAndLock" is required');
-        });
-
-         it('shoud fail if storage does not have setAndUnlock', () =>{
-            expect(() => new TokenBucket({ 
-                storage: {
-                    getAndLock: () => {}
-                },
-                identifier: 'valid' 
-            })).to.throw('"setAndUnlock" is required');
-        });
-    });
     describe('failure', () => {
          it('should fail to take 1 token if bucket is empty', done => {
-            const identifier = 'bucket-name';
-            const storage = {
-                getAndLock: sinon.stub().yields(null, 0),
-                setAndUnlock: () => {}
-            };
-
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket();
 
             bucket.take(1, (err, result) => {
                 expect(err).to.not.exist;
@@ -60,13 +31,12 @@ describe('token-bucket', () => {
         });
 
         it('should fail to take 2 tokens if bucket has 1', done => {
-            const identifier = 'bucket-name';
-            const storage = {
-                getAndLock: sinon.stub().yields(null, 1),
-                setAndUnlock: () => {}
-            };
-
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket( {
+                storage: {
+                    getAndLock: sinon.stub().yields(null, 1),
+                    setAndUnlock: () => {}
+                }
+            });
 
             bucket.take(2, (err, result) => {
                 expect(err).to.not.exist;
@@ -78,17 +48,16 @@ describe('token-bucket', () => {
 
     describe('success', () =>{ 
         it('should get tokens from storage passing bucket identifier', done => {
-            const identifier = 'bucket-name';
             const storage = {
                 getAndLock: sinon.mock()
                     .once()
-                    .withArgs(identifier)
+                    .withArgs(DEFAULT_IDENTIFIER)
                     .yields(null, 0),
                 setAndUnlock: () => {}
             };
-
-            const bucket = new TokenBucket({ identifier, storage });
-
+            
+            const bucket = createTokenBucket({ storage });
+            
             bucket.take(1, (err, result) => {
                 expect(err).to.not.exist;
                 expect(result).to.be.false;
@@ -98,13 +67,12 @@ describe('token-bucket', () => {
         });
 
         it('should succeed taking 1 token from storage if there is one', done => {
-            const identifier = 'bucket-name';
-            const storage = {
-                getAndLock: sinon.stub().yields(null, 1),
-                setAndUnlock: sinon.stub().yields(null)
-            };
-
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket({
+                storage : {
+                    getAndLock: sinon.stub().yields(null, 1),
+                    setAndUnlock: sinon.stub().yields(null)
+                }
+            });
 
             bucket.take(1, (err, result) => {
                 expect(err).to.not.exist;
@@ -114,7 +82,6 @@ describe('token-bucket', () => {
         });
 
         it('should decrease token amount by 2 if taking > 2 tokens and they are available', done => {
-            const identifier = 'bucket-name';
             const toTake = 2;
             const tokensInBucketStart = 3;
             const tokensInBucketEnd = tokensInBucketStart - toTake;
@@ -124,11 +91,12 @@ describe('token-bucket', () => {
             };
 
             const mockStorage = sinon.mock(storage);
-            mockStorage.expects('getAndLock').once().withArgs(identifier).yields(null, 3);
+            mockStorage.expects('getAndLock').once()
+                .withArgs(DEFAULT_IDENTIFIER).yields(null, 3);
             mockStorage.expects('setAndUnlock')
-                .once().withArgs(identifier, tokensInBucketEnd).yields(null);
+                .once().withArgs(DEFAULT_IDENTIFIER, tokensInBucketEnd).yields(null);
 
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket({ storage });
 
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -141,13 +109,12 @@ describe('token-bucket', () => {
 
     describe('errors', () => {
         it('should return error if it failed to get tokens from storage', done => {
-            const identifier = 'bucket-name';
             const storage = {
                 getAndLock: sinon.stub().yields(new Error('Something went wrong')),
                 setAndUnlock: () => {}
             };
 
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket({ storage });
 
             bucket.take(1, (err, result) => {
                 expect(err).to.exist;
@@ -157,13 +124,12 @@ describe('token-bucket', () => {
         });
 
         it('should return error if it failed to take tokens from storage', done => {
-            const identifier = 'bucket-name';
             const storage = {
                 getAndLock: sinon.stub().yields(null, 1),
                 setAndUnlock: sinon.stub().yields(new Error('Something went wrong'))
             };
 
-            const bucket = new TokenBucket({ identifier, storage });
+            const bucket = createTokenBucket({ storage });
 
             bucket.take(1, (err, result) => {
                 expect(err).to.exist;

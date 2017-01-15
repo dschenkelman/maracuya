@@ -1,5 +1,5 @@
 {
-  "name": "terminus",
+  "name": "maracuya",
   "version": "1.0.0",
   "description": "An app layer distributed rate limiter",
   "main": "index.js",

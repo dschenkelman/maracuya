@@ -8,8 +8,7 @@ describe('BucketType', () => {
         perInterval: 1,
         interval: 1000,
         storage: {
-            getAndLock(){},
-            setAndUnlock(){}
+            getAndLock(){}
         }
     };
 
@@ -45,14 +44,6 @@ describe('BucketType', () => {
                     setAndUnlock: () => {}
                 }
             }))).to.throw('"getAndLock" is required');
-        });
-
-        it('shoud fail if storage does not have setAndUnlock', () =>{
-            expect(() => new BucketType(patch({ 
-                storage: {
-                    getAndLock: () => {}
-                }
-            }))).to.throw('"setAndUnlock" is required');
         });
     });
 

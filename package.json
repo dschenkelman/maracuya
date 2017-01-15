@@ -1,17 +1,19 @@
 {
   "name": "maracuya",
   "version": "1.0.0",
-  "description": "An app layer distributed rate limiter",
+  "description": "A token bucket library",
   "main": "index.js",
   "author": "dschenkelman",
   "license": "MIT",
   "dependencies": {
-    "joi": "^10.1.0"
+    "joi": "^10.1.0",
+    "lock": "^0.1.3"
   },
   "scripts": {
     "test": "mocha"
   },
   "devDependencies": {
+    "async": "^2.1.4",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "sinon": "^1.17.7"

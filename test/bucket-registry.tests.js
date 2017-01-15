@@ -10,8 +10,7 @@ describe('BucketRegistry', () => {
     const DEFAULT_PER_INTERVAL = 1;
     const DEFAULT_CAPACITY = 10;
     const DEFAULT_STORAGE = {
-        getAndLock(){},
-        setAndUnlock(){}
+        getAndLock(){}
     };
 
     const DEFAULT_CONFIGURATION = {
@@ -159,14 +158,6 @@ describe('BucketRegistry', () => {
                         setAndUnlock: () => {}
                     }
                 })).to.throw('"getAndLock" is required');
-            });
-
-            it('shoud fail if storage does not have setAndUnlock', () =>{
-                expect(() => createRegistry({ 
-                    storage: {
-                        getAndLock: () => {}
-                    }
-                })).to.throw('"setAndUnlock" is required');
             });
         });
 

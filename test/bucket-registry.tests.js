@@ -144,10 +144,6 @@ describe('BucketRegistry', () => {
         });
 
         describe('storage', () => {
-            it('shoud fail if storage is not present', () =>{
-                expect(() => new BucketRegistry({ })).to.throw('"storage" is required');
-            });
-
             it('shoud fail if storage is not object', () =>{
                 expect(() => createRegistry({ storage: 1 })).to.throw('"storage" must be an object');
             });

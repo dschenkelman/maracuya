@@ -14,7 +14,9 @@ describe('token-bucket implementation', () => {
     const createBucketType = function createBucketType(patch){
         patch = patch || {};
         const storage = {
-            getAndLock: sinon.stub().yields(null, { count: 0, lastChange: DEFAULT_LAST_CHANGE })
+            getAndLock: sinon.stub().yields(null, 
+                { count: 0, lastChange: DEFAULT_LAST_CHANGE }, 
+                sinon.stub().yields(null, null))
         };
 
         return new BucketType(Object.assign({}, {
@@ -52,7 +54,9 @@ describe('token-bucket implementation', () => {
             const bucket = createTokenBucket( {
                 type: createBucketType({
                     storage: {
-                        getAndLock: sinon.stub().yields(null, { count: 1, lastChange: DEFAULT_LAST_CHANGE })
+                        getAndLock: sinon.stub().yields(null, 
+                            { count: 1, lastChange: DEFAULT_LAST_CHANGE },
+                            sinon.stub().yields(null, null))
                     }}
                 ),
                 timestampProvider: () => DEFAULT_LAST_CHANGE
@@ -65,6 +69,29 @@ describe('token-bucket implementation', () => {
             });
         });
 
+        it('should release lock if it failed to take tokens', done => {
+            const mockSetAndUnlock = sinon.mock()
+                .withExactArgs(DEFAULT_IDENTIFIER, sinon.match.func)
+                .yields(null, null);
+            const bucket = createTokenBucket( {
+                type: createBucketType({
+                    storage: {
+                        getAndLock: sinon.stub().yields(null, 
+                            { count: 1, lastChange: DEFAULT_LAST_CHANGE },
+                            mockSetAndUnlock)
+                    }}
+                ),
+                timestampProvider: () => DEFAULT_LAST_CHANGE
+            });
+
+            bucket.take(2, (err, result) => {
+                expect(err).to.not.exist;
+                expect(result).to.be.false;
+                mockSetAndUnlock.verify();
+                done();
+            });
+        });
+
         it('should not set data and fail to take more tokens than available after drip', done => {
             const toTake = 9;
             const timestamp = 3000;
@@ -73,7 +100,8 @@ describe('token-bucket implementation', () => {
             const perInterval = 1;
             const interval = 1000;
             const capacity = 10;
-            const mockSetAndUnlock = sinon.mock().never();
+            const mockSetAndUnlock = sinon.mock().once()
+                .withExactArgs(DEFAULT_IDENTIFIER, sinon.match.func).yields(null, null);
             const storage = {
                 getAndLock: sinon.stub().yields(null, {
                     lastChange: 1000,
@@ -100,7 +128,7 @@ describe('token-bucket implementation', () => {
             const storage = {
                 getAndLock: sinon.mock()
                     .once()
-                    .withArgs(DEFAULT_IDENTIFIER)
+                    .withExactArgs(DEFAULT_IDENTIFIER, sinon.match.func)
                     .yields(null, 
                         { count: 0, lastChange: DEFAULT_LAST_CHANGE },
                         sinon.stub().yields(null))
@@ -147,12 +175,12 @@ describe('token-bucket implementation', () => {
             };
 
             const mockSetAndUnlock = sinon.mock().once()
-                .withArgs(DEFAULT_IDENTIFIER, { count: tokensInBucketEnd, lastChange: timestamp })
+                .withExactArgs(DEFAULT_IDENTIFIER, { count: tokensInBucketEnd, lastChange: timestamp }, sinon.match.func)
                 .yields(null);
 
             const mockStorage = sinon.mock(storage);
             mockStorage.expects('getAndLock').once()
-                .withArgs(DEFAULT_IDENTIFIER).yields(null, { count: 3, lastChange: timestamp }, mockSetAndUnlock);
+                .withExactArgs(DEFAULT_IDENTIFIER, sinon.match.func).yields(null, { count: 3, lastChange: timestamp }, mockSetAndUnlock);
             
             const bucket = createTokenBucket({ 
                 type: createBucketType({ storage }), 
@@ -172,10 +200,10 @@ describe('token-bucket implementation', () => {
             const timestamp = 1000;
             const timestampProvider = () => timestamp;
             const mockSetAndUnlock = sinon.mock().once()
-                .withArgs(DEFAULT_IDENTIFIER, { 
+                .withExactArgs(DEFAULT_IDENTIFIER, { 
                     count: DEFAULT_CAPACITY - toTake,
                     lastChange: timestamp
-                })
+                }, sinon.match.func)
                 .yields(null, null);
             const storage = {
                 getAndLock: sinon.stub().yields(null, null, mockSetAndUnlock)
@@ -201,12 +229,12 @@ describe('token-bucket implementation', () => {
             const perInterval = 1;
             const interval = 1000;
             const mockSetAndUnlock = sinon.mock().once()
-                .withArgs(DEFAULT_IDENTIFIER, { 
+                .withExactArgs(DEFAULT_IDENTIFIER, { 
                     // count increases one because 1 second elapsed and that's the interval. 
                     // the per interval increase is 1
                     count: initialCount - toTake + 1,
                     lastChange: timestamp
-                })
+                }, sinon.match.func)
                 .yields(null, null);
 
             const storage = {
@@ -236,10 +264,10 @@ describe('token-bucket implementation', () => {
             const perInterval = 1;
             const interval = 1000;
             const mockSetAndUnlock  = sinon.mock().once()
-                .withArgs(DEFAULT_IDENTIFIER, { 
+                .withExactArgs(DEFAULT_IDENTIFIER, { 
                     count: initialCount - toTake,
                     lastChange: timestamp
-                })
+                }, sinon.match.func)
                 .yields(null, null);
             const storage = {
                 getAndLock: sinon.stub().yields(null, {
@@ -269,10 +297,10 @@ describe('token-bucket implementation', () => {
             const interval = 1000;
             const capacity = 10;
             const mockSetAndUnlock = sinon.mock().once()
-                .withArgs(DEFAULT_IDENTIFIER, { 
+                .withExactArgs(DEFAULT_IDENTIFIER, { 
                     count: capacity - toTake,
                     lastChange: timestamp
-                })
+                }, sinon.match.func)
                 .yields(null, null);
             const storage = {
                 getAndLock: sinon.stub().yields(null, {
@@ -302,11 +330,11 @@ describe('token-bucket implementation', () => {
             const interval = 1000;
             const capacity = 10;
             const lastChange = 1000;
-            const mockSetAndUnlock = sinon.mock().once().withArgs(DEFAULT_IDENTIFIER, { 
+            const mockSetAndUnlock = sinon.mock().once().withExactArgs(DEFAULT_IDENTIFIER, { 
                     // initialCount + ((timestamp - lastChange) / interval) - toTake
                     count: 1,
                     lastChange: timestamp
-                })
+                }, sinon.match.func)
                 .yields(null, null);
             const storage = {
                 getAndLock: sinon.stub().yields(null, {

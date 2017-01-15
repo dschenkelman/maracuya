@@ -1,49 +1,46 @@
 const expect = require('chai').expect;
 const sinon = require('sinon');
-const TokenBucket = require('../lib/token-bucket');
+const BucketType = require('../lib/bucket-type');
 
-describe('token-bucket params', () => {
+describe('BucketType', () => {
     const params = {
-        storage: {
-            getAndLock: () => {},
-            setAndUnlock: () => {}
-        },
-        identifier: 'id',
         capacity: 10,
         perInterval: 1,
-        interval: 1000
+        interval: 1000,
+        storage: {
+            getAndLock(){},
+            setAndUnlock(){}
+        }
     };
 
     const patch = function(update){
         return Object.assign({}, params, update);
     };
 
-    describe('identifier', () => {
-        it('should fail if identifier is not present', () => {
-            expect(() => new TokenBucket({})).to.throw('"identifier" is required');
-        });
+    it('should set params as properties', () => {
+        const bucketType = new BucketType(params);
 
-        it('should fail if identifier is not string', () => {
-            expect(() => new TokenBucket(patch({ identifier: []})))
-                .to.throw('"identifier" must be a string');
-        });
+        expect(bucketType.capacity).to.equal(10);
+        expect(bucketType.perInterval).to.equal(1);
+        expect(bucketType.interval).to.equal(1000);
+        expect(bucketType.storage).to.deep.equal(params.storage);
+    });
 
-        it('should fail if identifier is empty', () => {
-            expect(() => new TokenBucket(patch({ identifier: ''}))).to.throw('"identifier" is not allowed to be empty');
-        });
+    it('should fail if no params are passed', () => {
+        expect(() => new BucketType()).to.throw('"params" argument is required');
     });
 
     describe('storage', () => {
         it('shoud fail if storage is not present', () =>{
-            expect(() => new TokenBucket({ identifier: 'valid' })).to.throw('"storage" is required');
+            expect(() => new BucketType({ })).to.throw('"storage" is required');
         });
 
         it('shoud fail if storage is not object', () =>{
-            expect(() => new TokenBucket(patch({ identifier: 'valid', storage: 1 }))).to.throw('"storage" must be an object');
+            expect(() => new BucketType(patch({ storage: 1 }))).to.throw('"storage" must be an object');
         });
 
         it('shoud fail if storage does not have getAndLock', () =>{
-            expect(() => new TokenBucket(patch({ 
+            expect(() => new BucketType(patch({ 
                 storage: {
                     setAndUnlock: () => {}
                 }
@@ -51,11 +48,10 @@ describe('token-bucket params', () => {
         });
 
         it('shoud fail if storage does not have setAndUnlock', () =>{
-            expect(() => new TokenBucket(patch({ 
+            expect(() => new BucketType(patch({ 
                 storage: {
                     getAndLock: () => {}
-                },
-                identifier: 'valid' 
+                }
             }))).to.throw('"setAndUnlock" is required');
         });
     });
@@ -65,36 +61,29 @@ describe('token-bucket params', () => {
             it('should fail if ${param} is not a number', () => {
                 const update = {};
                 update[param] = 'hello';
-                expect(() => new TokenBucket(patch(update)))
+                expect(() => new BucketType(patch(update)))
                     .to.throw(`"${param}" must be a number`);
             });
 
             it('should fail if ${param} is not greater than 0', () => {
                 const update = {};
                 update[param] = -1;
-                expect(() => new TokenBucket(patch(update)))
+                expect(() => new BucketType(patch(update)))
                     .to.throw(`"${param}" must be greater than 0`);
             });
 
             it('should fail if ${param} is not an integer', () => {
                 const update = {};
                 update[param] = 1.2;
-                expect(() => new TokenBucket(patch(update)))
+                expect(() => new BucketType(patch(update)))
                     .to.throw(`"${param}" must be an integer`);
             });
 
             it('should fail if ${param} is not present', () => {
                 const paramsClone = Object.assign({}, params);
                 delete paramsClone[param];
-                expect(() => new TokenBucket(paramsClone)).to.throw(`"${param}" is required`);
+                expect(() => new BucketType(paramsClone)).to.throw(`"${param}" is required`);
             });
-        });
-    });
-
-    describe('timestampProvider', () => {
-        it('should fail if timestampProvider is not function', () => { 
-            expect(() => new TokenBucket(patch({ timestampProvider: 1 })))
-                .to.throw('"timestampProvider" must be a Function');
         });
     });
 });

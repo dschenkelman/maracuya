@@ -1,6 +1,7 @@
 const expect = require('chai').expect;
 const sinon = require('sinon');
 const TokenBucket = require('../lib/token-bucket');
+const BucketType = require('../lib/bucket-type');
 
 describe('token-bucket implementation', () => {
     const DEFAULT_IDENTIFIER = 'bucket-id';
@@ -9,6 +10,22 @@ describe('token-bucket implementation', () => {
     const DEFAULT_INTERVAL = 1000;
     const DEFAULT_PER_INTERVAL = 1;
     const DEFAULT_LAST_CHANGE = 1000;
+
+    const createBucketType = function createBucketType(patch){
+        patch = patch || {};
+        const storage = {
+            getAndLock: sinon.stub().yields(null, { count: 0, lastChange: DEFAULT_LAST_CHANGE }),
+            setAndUnlock: sinon.stub().yields(null)
+        };
+
+        return new BucketType(Object.assign({}, {
+            capacity: DEFAULT_CAPACITY, 
+            interval: DEFAULT_INTERVAL,
+            perInterval: DEFAULT_PER_INTERVAL,
+            storage
+        }, patch));
+    };
+
     const createTokenBucket = function createTokenBucket(patch){
         patch = patch || {};
         const storage = {
@@ -16,13 +33,10 @@ describe('token-bucket implementation', () => {
             setAndUnlock: sinon.stub().yields(null)
         };
 
-        return new TokenBucket(Object.assign({}, { 
+        return new TokenBucket(Object.assign({}, {
+            type: createBucketType(),
             identifier: DEFAULT_IDENTIFIER, 
-            capacity: DEFAULT_CAPACITY, 
-            interval: DEFAULT_INTERVAL,
-            perInterval: DEFAULT_PER_INTERVAL,
             timestampProvider: () => DEFAULT_LAST_CHANGE,
-            storage
         }, patch));
     };
 
@@ -41,10 +55,12 @@ describe('token-bucket implementation', () => {
 
         it('should fail to take 2 tokens if bucket has 1', done => {
             const bucket = createTokenBucket( {
-                storage: {
-                    getAndLock: sinon.stub().yields(null, { count: 1, lastChange: DEFAULT_LAST_CHANGE }),
-                    setAndUnlock: () => {}
-                },
+                type: createBucketType({
+                    storage: {
+                        getAndLock: sinon.stub().yields(null, { count: 1, lastChange: DEFAULT_LAST_CHANGE }),
+                        setAndUnlock: () => {}
+                    }}
+                ),
                 timestampProvider: () => DEFAULT_LAST_CHANGE
             });
 
@@ -71,9 +87,12 @@ describe('token-bucket implementation', () => {
                 setAndUnlock: sinon.mock().never()
             };
             
-            const bucket = createTokenBucket({ 
-                interval, perInterval, 
-                storage, timestampProvider });
+            const bucket = createTokenBucket({
+                type: createBucketType({
+                    interval, perInterval, storage,
+                }),
+                timestampProvider 
+            });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -92,7 +111,7 @@ describe('token-bucket implementation', () => {
                 setAndUnlock: sinon.stub().yields(null, null),
             };
             
-            const bucket = createTokenBucket({ storage });
+            const bucket = createTokenBucket({ type: createBucketType({ storage }) });
             
             bucket.take(1, (err, result) => {
                 expect(err).to.not.exist;
@@ -106,10 +125,12 @@ describe('token-bucket implementation', () => {
     describe('success', () => {
         it('should succeed taking 1 token from storage if there is one', done => {
             const bucket = createTokenBucket({
-                storage : {
-                    getAndLock: sinon.stub().yields(null, { count: 1, lastChange: DEFAULT_LAST_CHANGE }),
-                    setAndUnlock: sinon.stub().yields(null)
-                }
+                type: createBucketType({
+                    storage : {
+                        getAndLock: sinon.stub().yields(null, { count: 1, lastChange: DEFAULT_LAST_CHANGE }),
+                        setAndUnlock: sinon.stub().yields(null)
+                    }
+                })
             });
 
             bucket.take(1, (err, result) => {
@@ -138,7 +159,9 @@ describe('token-bucket implementation', () => {
                 .withArgs(DEFAULT_IDENTIFIER, { count: tokensInBucketEnd, lastChange: timestamp })
                 .yields(null);
 
-            const bucket = createTokenBucket({ storage, timestampProvider });
+            const bucket = createTokenBucket({ 
+                type: createBucketType({ storage }), 
+                timestampProvider });
 
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -162,7 +185,9 @@ describe('token-bucket implementation', () => {
                     .yields(null, null)
             };
             
-            const bucket = createTokenBucket({ storage, timestampProvider });
+            const bucket = createTokenBucket({ 
+                type: createBucketType({ storage }), 
+                timestampProvider });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -195,8 +220,8 @@ describe('token-bucket implementation', () => {
             };
             
             const bucket = createTokenBucket({ 
-                interval, perInterval, 
-                storage, timestampProvider });
+                type: createBucketType({ storage, perInterval, interval }), 
+                timestampProvider });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -227,8 +252,8 @@ describe('token-bucket implementation', () => {
             };
             
             const bucket = createTokenBucket({ 
-                interval, perInterval, 
-                storage, timestampProvider });
+                type: createBucketType({ storage, perInterval, interval }), 
+                timestampProvider });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -260,8 +285,8 @@ describe('token-bucket implementation', () => {
             };
             
             const bucket = createTokenBucket({ 
-                interval, perInterval, 
-                storage, timestampProvider });
+                type: createBucketType({ storage, perInterval, interval }), 
+                timestampProvider });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -295,8 +320,8 @@ describe('token-bucket implementation', () => {
             };
             
             const bucket = createTokenBucket({ 
-                interval, perInterval, 
-                storage, timestampProvider });
+                type: createBucketType({ storage, perInterval, interval }), 
+                timestampProvider });
             
             bucket.take(toTake, (err, result) => {
                 expect(err).to.not.exist;
@@ -314,7 +339,7 @@ describe('token-bucket implementation', () => {
                 setAndUnlock: () => {}
             };
 
-            const bucket = createTokenBucket({ storage });
+            const bucket = createTokenBucket({ type: createBucketType({ storage }) });
 
             bucket.take(1, (err, result) => {
                 expect(err).to.exist;
@@ -329,12 +354,62 @@ describe('token-bucket implementation', () => {
                 setAndUnlock: sinon.stub().yields(new Error('Something went wrong'))
             };
 
-            const bucket = createTokenBucket({ storage });
+            const bucket = createTokenBucket({ type: createBucketType({ storage }) });
 
             bucket.take(1, (err, result) => {
                 expect(err).to.exist;
                 expect(err.message).to.equal('Something went wrong');
                 done();
+            });
+        });
+    });
+
+    describe('params validation', () => {
+        const params = {
+            type: new BucketType({
+                capacity: 10,
+                perInterval: 1,
+                interval: 1000,
+                storage: {
+                    getAndLock: () => {},
+                    setAndUnlock: () => {}
+                }
+            }),
+            identifier: 'id'
+        };
+
+        const patch = function(update){
+            return Object.assign({}, params, update);
+        };
+
+        it('should fail if no params are passed', () => {
+            expect(() => new TokenBucket()).to.throw('"params" argument is required');
+        });
+
+        it('should fail if type is not BucketType', () => {
+            expect(() => new TokenBucket(patch({ type: {} })))
+                .to.throw('"type" must be an instance of "BucketType"');
+        });
+
+        describe('timestampProvider', () => {
+            it('should fail if timestampProvider is not function', () => { 
+                expect(() => new TokenBucket(patch({ timestampProvider: 1 })))
+                    .to.throw('"timestampProvider" must be a Function');
+            });
+        });
+
+        describe('identifier', () => {
+            it('should fail if identifier is not present', () => {
+                expect(() => new TokenBucket({})).to.throw('"identifier" is required');
+            });
+
+            it('should fail if identifier is not string', () => {
+                expect(() => new TokenBucket(patch({ identifier: []})))
+                    .to.throw('"identifier" must be a string');
+            });
+
+            it('should fail if identifier is empty', () => {
+                expect(() => new TokenBucket(patch({ identifier: ''}))).to.throw('"identifier" is not allowed to be empty');
             });
         });
     });

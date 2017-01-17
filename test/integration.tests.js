@@ -3,6 +3,7 @@ const sinon = require('sinon');
 const async = require('async');
 const BucketRegistry = require('../lib/bucket-registry');
 const MemoryStorage = require('../lib/memory-storage');
+const Configuration = require('../lib/configuration');
 
 describe('#integration', () => {
     beforeEach(() =>{
@@ -27,13 +28,7 @@ describe('#integration', () => {
     };
 
     it('should work with one bucket, one type', done => {
-        const registry = new BucketRegistry({
-            configuration: {
-                get(type){
-                    return config[type];
-                }
-            }
-        });
+        const registry = new BucketRegistry({ configuration: Configuration.fromObject(config) });
 
         const bucketA1 = registry.get('a', '1');
 

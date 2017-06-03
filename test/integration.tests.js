@@ -1,9 +1,7 @@
 const expect = require('chai').expect;
 const sinon = require('sinon');
 const async = require('async');
-const BucketRegistry = require('../lib/bucket-registry');
-const MemoryStorage = require('../lib/memory-storage');
-const Configuration = require('../lib/configuration');
+const { Configuration, BucketRegistry } = require('../');
 
 describe('#integration', () => {
     beforeEach(() =>{

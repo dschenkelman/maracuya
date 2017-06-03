@@ -130,7 +130,17 @@ describe('BucketRegistry', () => {
         mockFactory.verify();
     });
 
+    it('should return null if configuration for type does not exist', () => {
+        const registry = createRegistry({
+            configuration: {
+                get: sinon.stub().returns(null)
+            }
+        });
 
+        const type = 'bucket-type';
+
+        expect(registry.get(type)).to.be.null;
+    });
 
     describe('params', () => {
         it('should fail if no params are passed', () => {
